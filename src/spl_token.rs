@@ -16,7 +16,7 @@ pub struct InitializeMint {
     #[serde(alias = "mintAuthority")]
     mint_authority: String,
     mint: String,
-    decimals: u8,
+    decimals: i32,
 }
 
 #[derive(Serialize)]
@@ -42,6 +42,14 @@ pub struct AccountData {
 pub async fn spl_token_initialize_mint_instruction(
     Json(payload): Json<InitializeMint>,
 ) -> Result<Json<MintResponse>, (StatusCode, Json<ErrorResponse>)> {
+    // Validate decimals field
+    if payload.decimals < 0 || payload.decimals > 9 {
+        return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse {
+            success: false,
+            error: "Decimals must be between 0 and 9".to_string(),
+        })));
+    }
+
     let mint_authority = match Pubkey::from_str(&payload.mint_authority) {
         Ok(pub_key) => pub_key,
         Err(_) => {
@@ -67,7 +75,7 @@ pub async fn spl_token_initialize_mint_instruction(
         &mint,
         &mint_authority,
         None,
-        payload.decimals,
+        payload.decimals as u8,
     ) {
         Ok(ix) => ix,
         Err(_) => {

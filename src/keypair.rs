@@ -1,6 +1,6 @@
 use serde::Serialize;
 use solana_sdk::{signature::Keypair, signer::Signer};
-use axum::{Json, http::StatusCode};
+use axum::Json;
 
 #[derive(Serialize)]
 pub struct ErrorResponse {
