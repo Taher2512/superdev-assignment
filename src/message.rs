@@ -68,10 +68,8 @@ pub async fn sign_message(
         })));
     }
 
-    // Parse the secret key from base58
     let keypair = match bs58::decode(&payload.secret).into_vec() {
         Ok(bytes) => {
-            // Validate byte length first
             if bytes.len() != 64 {
                 return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse {
                     success: false,
@@ -79,7 +77,6 @@ pub async fn sign_message(
                 })));
             }
             
-            // Use try_from for safer conversion
             match Keypair::try_from(bytes.as_slice()) {
                 Ok(kp) => kp,
                 Err(e) => {

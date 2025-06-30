@@ -15,7 +15,7 @@ pub struct MintTokenRequest {
     mint: String,
     destination: String,
     authority: String,
-    amount: u64,
+    amount: i64,
 }
 
 #[derive(Serialize)]
@@ -48,7 +48,7 @@ pub async fn mint_token(
         })));
     }
 
-    if payload.amount == 0 {
+    if payload.amount <= 0 {
         return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse {
             success: false,
             error: "Amount must be greater than zero".to_string(),

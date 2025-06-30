@@ -17,7 +17,7 @@ pub struct ErrorResponse {
 pub struct SendSolRequest {
     from: String,
     to: String,
-    lamports: u64,
+    lamports: i64,
 }
 
 #[derive(Serialize)]
@@ -40,7 +40,7 @@ fn is_valid_pubkey(pubkey_str: &str) -> bool {
     }
 }
 
-fn is_valid_lamports(lamports: u64) -> bool {
+fn is_valid_lamports(lamports: i64) -> bool {
     lamports > 0 && lamports <= 1_000_000_000_000_000
 }
 
@@ -57,7 +57,7 @@ pub async fn send_sol(
     if !is_valid_lamports(payload.lamports) {
         return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse {
             success: false,
-            error: "Invalid lamports amount".to_string(),
+            error: "Invalid lamports amount. Must be positive and not exceed 1,000,000,000,000,000".to_string(),
         })));
     }
 
@@ -88,7 +88,7 @@ pub async fn send_sol(
     let instruction = system_instruction::transfer(
         &from_pubkey,
         &to_pubkey,
-        payload.lamports,
+        payload.lamports as u64,
     );
 
     let instruction_data = general_purpose::STANDARD.encode(&instruction.data);
