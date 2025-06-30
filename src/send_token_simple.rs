@@ -103,7 +103,7 @@ pub async fn send_token(
         data: SendTokenData {
             program_id: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA".to_string(),
             accounts,
-            instruction_data: general_purpose::STANDARD.encode(&[1, 2, 3, 4]), // Mock instruction data
+            instruction_data: general_purpose::STANDARD.encode(&[1, 2, 3, 4]),
         },
     };
 

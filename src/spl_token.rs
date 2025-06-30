@@ -42,7 +42,6 @@ pub struct AccountData {
 pub async fn spl_token_initialize_mint_instruction(
     Json(payload): Json<InitializeMint>,
 ) -> Result<Json<MintResponse>, (StatusCode, Json<ErrorResponse>)> {
-    // Validate decimals field
     if payload.decimals < 0 || payload.decimals > 9 {
         return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse {
             success: false,
