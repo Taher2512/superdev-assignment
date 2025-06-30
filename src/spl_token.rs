@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use solana_sdk::pubkey::Pubkey;
 use spl_token::instruction::initialize_mint;
 use axum::Json;
-use base64;
+use base64::{Engine as _, engine::general_purpose};
 use std::str::FromStr;
 
 #[derive(Serialize)]
@@ -95,7 +95,7 @@ pub async fn spl_token_initialize_mint_instruction(
         })
         .collect();
 
-    let instruction_data = base64::encode(&instruction.data);
+    let instruction_data = general_purpose::STANDARD.encode(&instruction.data);
 
     let response = MintResponse {
         success: true,

@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use solana_sdk::pubkey::Pubkey;
 use axum::Json;
 use std::str::FromStr;
-use base64;
+use base64::{Engine as _, engine::general_purpose};
 
 #[derive(Serialize)]
 pub struct ErrorResponse {
@@ -110,7 +110,7 @@ pub async fn send_token(
         data: SendTokenData {
             program_id: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA".to_string(),
             accounts,
-            instruction_data: base64::encode(&[1, 2, 3, 4]), // Mock instruction data
+            instruction_data: general_purpose::STANDARD.encode(&[1, 2, 3, 4]), // Mock instruction data
         },
     };
 

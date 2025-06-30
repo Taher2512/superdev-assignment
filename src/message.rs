@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use solana_sdk::{signature::Keypair, signer::Signer, signature::Signature};
 use axum::Json;
 use std::str::FromStr;
-use base64;
+use base64::{Engine as _, engine::general_purpose};
 use bs58;
 
 #[derive(Serialize)]
@@ -90,7 +90,7 @@ pub async fn sign_message(
     } else {
         match bs58::decode(&payload.secret).into_vec() {
             Ok(bytes) if bytes.len() == 64 => {
-                match Keypair::from_bytes(&bytes) {
+                match Keypair::try_from(bytes.as_slice()) {
                     Ok(kp) => kp,
                     Err(_) => {
                         return Json(SignApiResponse::Error(ErrorResponse {
@@ -113,7 +113,7 @@ pub async fn sign_message(
 
     let signature = keypair.sign_message(message_bytes);
 
-    let signature_base64 = base64::encode(signature.as_ref());
+    let signature_base64 = general_purpose::STANDARD.encode(signature.as_ref());
 
     let public_key = keypair.pubkey().to_string();
 
@@ -149,7 +149,7 @@ pub async fn verify_message(
         }
     };
 
-    let signature_bytes = match base64::decode(&payload.signature) {
+    let signature_bytes = match general_purpose::STANDARD.decode(&payload.signature) {
         Ok(bytes) => bytes,
         Err(_) => {
             return Json(VerifyApiResponse::Error(ErrorResponse {

@@ -4,7 +4,7 @@ use spl_token::instruction::transfer;
 use spl_associated_token_account::get_associated_token_address;
 use axum::Json;
 use std::str::FromStr;
-use base64;
+use base64::{Engine as _, engine::general_purpose};
 
 #[derive(Serialize)]
 pub struct ErrorResponse {
@@ -92,9 +92,9 @@ pub async fn send_token(
         }));
     }
 
-    let destination_pubkey = Pubkey::from_str(&payload.destination).unwrap();
-    let mint_pubkey = Pubkey::from_str(&payload.mint).unwrap();
-    let owner_pubkey = Pubkey::from_str(&payload.owner).unwrap();
+    let destination_pubkey = Pubkey::from_str(&payload.destination).expect("Already validated");
+    let mint_pubkey = Pubkey::from_str(&payload.mint).expect("Already validated");
+    let owner_pubkey = Pubkey::from_str(&payload.owner).expect("Already validated");
 
     let source_ata = get_associated_token_address(&owner_pubkey, &mint_pubkey);
     let destination_ata = get_associated_token_address(&destination_pubkey, &mint_pubkey);
@@ -116,7 +116,7 @@ pub async fn send_token(
         }
     };
 
-    let instruction_data = base64::encode(&instruction.data);
+    let instruction_data = general_purpose::STANDARD.encode(&instruction.data);
 
     let accounts: Vec<AccountInfo> = instruction
         .accounts

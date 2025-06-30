@@ -5,7 +5,7 @@ use solana_sdk::{
 };
 use axum::Json;
 use std::str::FromStr;
-use base64;
+use base64::{Engine as _, engine::general_purpose};
 
 #[derive(Serialize)]
 pub struct ErrorResponse {
@@ -82,8 +82,8 @@ pub async fn send_sol(
         }));
     }
 
-    let from_pubkey = Pubkey::from_str(&payload.from).unwrap();
-    let to_pubkey = Pubkey::from_str(&payload.to).unwrap();
+    let from_pubkey = Pubkey::from_str(&payload.from).expect("Already validated");
+    let to_pubkey = Pubkey::from_str(&payload.to).expect("Already validated");
 
     if from_pubkey == to_pubkey {
         return Json(ApiResponse::Error(ErrorResponse {
@@ -98,7 +98,7 @@ pub async fn send_sol(
         payload.lamports,
     );
 
-    let instruction_data = base64::encode(&instruction.data);
+    let instruction_data = general_purpose::STANDARD.encode(&instruction.data);
 
     let accounts: Vec<String> = instruction
         .accounts
