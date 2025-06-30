@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use solana_sdk::pubkey::Pubkey;
-use axum::Json;
+use axum::{Json, http::StatusCode};
 use std::str::FromStr;
 use base64::{Engine as _, engine::general_purpose};
 
@@ -38,57 +38,50 @@ pub struct AccountData {
     is_writable: bool,
 }
 
-#[derive(Serialize)]
-#[serde(untagged)]
-pub enum ApiResponse {
-    Success(MintTokenResponse),
-    Error(ErrorResponse),
-}
-
 pub async fn mint_token(
     Json(payload): Json<MintTokenRequest>,
-) -> Json<ApiResponse> {
+) -> Result<Json<MintTokenResponse>, (StatusCode, Json<ErrorResponse>)> {
     if payload.mint.is_empty() || payload.destination.is_empty() || payload.authority.is_empty() {
-        return Json(ApiResponse::Error(ErrorResponse {
+        return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse {
             success: false,
             error: "Missing required fields".to_string(),
-        }));
+        })));
     }
 
     if payload.amount == 0 {
-        return Json(ApiResponse::Error(ErrorResponse {
+        return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse {
             success: false,
             error: "Amount must be greater than zero".to_string(),
-        }));
+        })));
     }
 
     let _mint_pubkey = match Pubkey::from_str(&payload.mint) {
         Ok(pub_key) => pub_key,
         Err(_) => {
-            return Json(ApiResponse::Error(ErrorResponse {
+            return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse {
                 success: false,
                 error: "Invalid mint address".to_string(),
-            }));
+            })));
         }
     };
 
     let _destination_pubkey = match Pubkey::from_str(&payload.destination) {
         Ok(pub_key) => pub_key,
         Err(_) => {
-            return Json(ApiResponse::Error(ErrorResponse {
+            return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse {
                 success: false,
                 error: "Invalid destination address".to_string(),
-            }));
+            })));
         }
     };
 
     let _authority_pubkey = match Pubkey::from_str(&payload.authority) {
         Ok(pub_key) => pub_key,
         Err(_) => {
-            return Json(ApiResponse::Error(ErrorResponse {
+            return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse {
                 success: false,
                 error: "Invalid authority address".to_string(),
-            }));
+            })));
         }
     };
 
@@ -119,5 +112,5 @@ pub async fn mint_token(
         },
     };
 
-    Json(ApiResponse::Success(response))
+    Ok(Json(response))
 }

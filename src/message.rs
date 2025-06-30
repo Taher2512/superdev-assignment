@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use solana_sdk::{signature::Keypair, signer::Signer, signature::Signature};
-use axum::Json;
+use axum::{Json, http::StatusCode, response::{Response, IntoResponse}};
 use std::str::FromStr;
 use base64::{Engine as _, engine::general_purpose};
 use bs58;
@@ -50,62 +50,51 @@ pub struct VerifyMessageData {
     pubkey: String,
 }
 
-#[derive(Serialize)]
-#[serde(untagged)]
-pub enum SignApiResponse {
-    Success(SignMessageResponse),
-    Error(ErrorResponse),
-}
-
-#[derive(Serialize)]
-#[serde(untagged)]
-pub enum VerifyApiResponse {
-    Success(VerifyMessageResponse),
-    Error(ErrorResponse),
-}
 
 pub async fn sign_message(
     Json(payload): Json<SignMessageRequest>,
-) -> Json<SignApiResponse> {
+) -> Result<Json<SignMessageResponse>, (StatusCode, Json<ErrorResponse>)> {
     if payload.message.is_empty() {
-        return Json(SignApiResponse::Error(ErrorResponse {
+        return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse {
             success: false,
             error: "Missing required fields".to_string(),
-        }));
+        })));
     }
     
     if payload.secret.is_empty() {
-        return Json(SignApiResponse::Error(ErrorResponse {
+        return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse {
             success: false,
             error: "Missing required fields".to_string(),
-        }));
+        })));
     }
 
     // Parse the secret key from base58
-    let keypair = if payload.secret.len() < 32 {
-        return Json(SignApiResponse::Error(ErrorResponse {
-            success: false,
-            error: "Invalid secret key format".to_string(),
-        }));
-    } else {
-        match bs58::decode(&payload.secret).into_vec() {
-            Ok(bytes) if bytes.len() == 64 => {
-                match Keypair::try_from(bytes.as_slice()) {
-                    Ok(kp) => kp,
-                    Err(_) => {
-                        return Json(SignApiResponse::Error(ErrorResponse {
-                            success: false,
-                            error: "Invalid secret key format".to_string(),
-                        }));
-                    }
+    let keypair = match bs58::decode(&payload.secret).into_vec() {
+        Ok(bytes) => {
+            // Validate byte length first
+            if bytes.len() != 64 {
+                return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse {
+                    success: false,
+                    error: "Invalid secret key length. Expected 64 bytes.".to_string(),
+                })));
+            }
+            
+            // Use try_from for safer conversion
+            match Keypair::try_from(bytes.as_slice()) {
+                Ok(kp) => kp,
+                Err(e) => {
+                    return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse {
+                        success: false,
+                        error: format!("Invalid secret key format: {}", e),
+                    })));
                 }
             }
-            _ => {
-                return Json(SignApiResponse::Error(ErrorResponse {
-                    success: false,
-                    error: "Invalid secret key format".to_string(),
-                }));
-            }
+        }
+        Err(_) => {
+            return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse {
+                success: false,
+                error: "Invalid base58 encoding in secret key".to_string(),
+            })));
         }
     };
 
@@ -126,46 +115,46 @@ pub async fn sign_message(
         },
     };
 
-    Json(SignApiResponse::Success(response))
+    Ok(Json(response))
 }
 
 pub async fn verify_message(
     Json(payload): Json<VerifyMessageRequest>,
-) -> Json<VerifyApiResponse> {
+) -> Result<Json<VerifyMessageResponse>, (StatusCode, Json<ErrorResponse>)> {
     if payload.message.is_empty() || payload.signature.is_empty() || payload.pubkey.is_empty() {
-        return Json(VerifyApiResponse::Error(ErrorResponse {
+        return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse {
             success: false,
             error: "Missing required fields".to_string(),
-        }));
+        })));
     }
 
     let public_key = match solana_sdk::pubkey::Pubkey::from_str(&payload.pubkey) {
         Ok(pk) => pk,
         Err(_) => {
-            return Json(VerifyApiResponse::Error(ErrorResponse {
+            return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse {
                 success: false,
                 error: "Invalid public key format".to_string(),
-            }));
+            })));
         }
     };
 
     let signature_bytes = match general_purpose::STANDARD.decode(&payload.signature) {
         Ok(bytes) => bytes,
         Err(_) => {
-            return Json(VerifyApiResponse::Error(ErrorResponse {
+            return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse {
                 success: false,
                 error: "Invalid signature format".to_string(),
-            }));
+            })));
         }
     };
 
     let signature = match Signature::try_from(signature_bytes.as_slice()) {
         Ok(sig) => sig,
         Err(_) => {
-            return Json(VerifyApiResponse::Error(ErrorResponse {
+            return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse {
                 success: false,
                 error: "Invalid signature format".to_string(),
-            }));
+            })));
         }
     };
 
@@ -182,5 +171,5 @@ pub async fn verify_message(
         },
     };
 
-    Json(VerifyApiResponse::Success(response))
+    Ok(Json(response))
 }

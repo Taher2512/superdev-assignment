@@ -1,6 +1,6 @@
 use serde::Serialize;
 use solana_sdk::{signature::Keypair, signer::Signer};
-use axum::Json;
+use axum::{Json, http::StatusCode};
 
 #[derive(Serialize)]
 pub struct ErrorResponse {
@@ -20,14 +20,7 @@ pub struct KeypairData {
     secret: String,
 }
 
-#[derive(Serialize)]
-#[serde(untagged)]
-pub enum ApiResponse {
-    Success(KeypairResponse),
-    Error(ErrorResponse),
-}
-
-pub async fn get_keypair() -> Json<ApiResponse> {
+pub async fn get_keypair() -> Json<KeypairResponse> {
     let keypair = Keypair::new();
     let address = keypair.pubkey();
     let secret = keypair.to_base58_string();
@@ -40,5 +33,5 @@ pub async fn get_keypair() -> Json<ApiResponse> {
         },
     };
 
-    Json(ApiResponse::Success(response))
+    Json(response)
 }

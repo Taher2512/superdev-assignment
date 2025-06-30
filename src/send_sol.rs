@@ -3,7 +3,7 @@ use solana_sdk::{
     pubkey::Pubkey,
     system_instruction,
 };
-use axum::Json;
+use axum::{Json, http::StatusCode};
 use std::str::FromStr;
 use base64::{Engine as _, engine::general_purpose};
 
@@ -33,13 +33,6 @@ pub struct SendSolData {
     instruction_data: String,
 }
 
-#[derive(Serialize)]
-#[serde(untagged)]
-pub enum ApiResponse {
-    Success(SendSolResponse),
-    Error(ErrorResponse),
-}
-
 fn is_valid_pubkey(pubkey_str: &str) -> bool {
     match Pubkey::from_str(pubkey_str) {
         Ok(_) => true,
@@ -53,43 +46,43 @@ fn is_valid_lamports(lamports: u64) -> bool {
 
 pub async fn send_sol(
     Json(payload): Json<SendSolRequest>,
-) -> Json<ApiResponse> {
+) -> Result<Json<SendSolResponse>, (StatusCode, Json<ErrorResponse>)> {
     if payload.from.is_empty() || payload.to.is_empty() {
-        return Json(ApiResponse::Error(ErrorResponse {
+        return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse {
             success: false,
             error: "Missing required fields".to_string(),
-        }));
+        })));
     }
 
     if !is_valid_lamports(payload.lamports) {
-        return Json(ApiResponse::Error(ErrorResponse {
+        return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse {
             success: false,
             error: "Invalid lamports amount".to_string(),
-        }));
+        })));
     }
 
     if !is_valid_pubkey(&payload.from) {
-        return Json(ApiResponse::Error(ErrorResponse {
+        return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse {
             success: false,
             error: "Invalid sender address".to_string(),
-        }));
+        })));
     }
 
     if !is_valid_pubkey(&payload.to) {
-        return Json(ApiResponse::Error(ErrorResponse {
+        return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse {
             success: false,
             error: "Invalid recipient address".to_string(),
-        }));
+        })));
     }
 
-    let from_pubkey = Pubkey::from_str(&payload.from).expect("Already validated");
-    let to_pubkey = Pubkey::from_str(&payload.to).expect("Already validated");
+    let from_pubkey = Pubkey::from_str(&payload.from).unwrap();
+    let to_pubkey = Pubkey::from_str(&payload.to).unwrap();
 
     if from_pubkey == to_pubkey {
-        return Json(ApiResponse::Error(ErrorResponse {
+        return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse {
             success: false,
             error: "Cannot send SOL to the same address".to_string(),
-        }));
+        })));
     }
 
     let instruction = system_instruction::transfer(
@@ -115,5 +108,5 @@ pub async fn send_sol(
         },
     };
 
-    Json(ApiResponse::Success(response))
+    Ok(Json(response))
 }

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use solana_sdk::pubkey::Pubkey;
-use axum::Json;
+use axum::{Json, http::StatusCode};
 use std::str::FromStr;
 use base64::{Engine as _, engine::general_purpose};
 
@@ -38,13 +38,6 @@ pub struct AccountInfo {
     is_signer: bool,
 }
 
-#[derive(Serialize)]
-#[serde(untagged)]
-pub enum ApiResponse {
-    Success(SendTokenResponse),
-    Error(ErrorResponse),
-}
-
 fn is_valid_pubkey(pubkey_str: &str) -> bool {
     match Pubkey::from_str(pubkey_str) {
         Ok(_) => true,
@@ -54,40 +47,40 @@ fn is_valid_pubkey(pubkey_str: &str) -> bool {
 
 pub async fn send_token(
     Json(payload): Json<SendTokenRequest>,
-) -> Json<ApiResponse> {
+) -> Result<Json<SendTokenResponse>, (StatusCode, Json<ErrorResponse>)> {
     if payload.destination.is_empty() || payload.mint.is_empty() || payload.owner.is_empty() {
-        return Json(ApiResponse::Error(ErrorResponse {
+        return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse {
             success: false,
             error: "Missing required fields".to_string(),
-        }));
+        })));
     }
 
     if payload.amount == 0 {
-        return Json(ApiResponse::Error(ErrorResponse {
+        return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse {
             success: false,
             error: "Amount must be greater than zero".to_string(),
-        }));
+        })));
     }
 
     if !is_valid_pubkey(&payload.destination) {
-        return Json(ApiResponse::Error(ErrorResponse {
+        return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse {
             success: false,
             error: "Invalid destination address".to_string(),
-        }));
+        })));
     }
 
     if !is_valid_pubkey(&payload.mint) {
-        return Json(ApiResponse::Error(ErrorResponse {
+        return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse {
             success: false,
             error: "Invalid mint address".to_string(),
-        }));
+        })));
     }
 
     if !is_valid_pubkey(&payload.owner) {
-        return Json(ApiResponse::Error(ErrorResponse {
+        return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse {
             success: false,
             error: "Invalid owner address".to_string(),
-        }));
+        })));
     }
 
     let accounts = vec![
@@ -114,5 +107,5 @@ pub async fn send_token(
         },
     };
 
-    Json(ApiResponse::Success(response))
+    Ok(Json(response))
 }

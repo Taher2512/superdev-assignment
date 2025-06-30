@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use solana_sdk::pubkey::Pubkey;
 use spl_token::instruction::initialize_mint;
-use axum::Json;
+use axum::{Json, http::StatusCode};
 use base64::{Engine as _, engine::general_purpose};
 use std::str::FromStr;
 
@@ -39,33 +39,26 @@ pub struct AccountData {
     is_writable: bool,
 }
 
-#[derive(Serialize)]
-#[serde(untagged)]
-pub enum ApiResponse {
-    Success(MintResponse),
-    Error(ErrorResponse),
-}
-
 pub async fn spl_token_initialize_mint_instruction(
     Json(payload): Json<InitializeMint>,
-) -> Json<ApiResponse> {
+) -> Result<Json<MintResponse>, (StatusCode, Json<ErrorResponse>)> {
     let mint_authority = match Pubkey::from_str(&payload.mint_authority) {
         Ok(pub_key) => pub_key,
         Err(_) => {
-            return Json(ApiResponse::Error(ErrorResponse {
+            return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse {
                 success: false,
                 error: "Invalid mint authority public key".to_string(),
-            }));
+            })));
         }
     };
 
     let mint = match Pubkey::from_str(&payload.mint) {
         Ok(pub_key) => pub_key,
         Err(_) => {
-            return Json(ApiResponse::Error(ErrorResponse {
+            return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse {
                 success: false,
                 error: "Invalid mint public key".to_string(),
-            }));
+            })));
         }
     };
 
@@ -78,10 +71,10 @@ pub async fn spl_token_initialize_mint_instruction(
     ) {
         Ok(ix) => ix,
         Err(_) => {
-            return Json(ApiResponse::Error(ErrorResponse {
+            return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse {
                 success: false,
                 error: "Failed to create mint instruction".to_string(),
-            }));
+            })));
         }
     };
 
@@ -106,5 +99,5 @@ pub async fn spl_token_initialize_mint_instruction(
         },
     };
 
-    Json(ApiResponse::Success(response))
+    Ok(Json(response))
 }
