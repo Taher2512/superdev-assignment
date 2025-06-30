@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
-use solana_sdk::{pubkey::Pubkey};
+use solana_sdk::pubkey::Pubkey;
 use spl_token::instruction::initialize_mint;
-use axum::{Json};
+use axum::Json;
 use base64;
 use std::str::FromStr;
 
