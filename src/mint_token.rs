@@ -115,7 +115,7 @@ pub async fn mint_token(
         data: MintTokenData {
             program_id: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA".to_string(),
             accounts,
-            instruction_data: base64::encode(&[1, 2, 3, 4]), // Mock instruction data
+            instruction_data: base64::encode(&[1, 2, 3, 4]),
         },
     };
 

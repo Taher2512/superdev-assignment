@@ -3,6 +3,7 @@ use solana_sdk::{signature::Keypair, signer::Signer, signature::Signature};
 use axum::Json;
 use std::str::FromStr;
 use base64;
+use bs58;
 
 #[derive(Serialize)]
 pub struct ErrorResponse {
@@ -80,8 +81,32 @@ pub async fn sign_message(
         }));
     }
 
-    let keypair = match Keypair::from_base58_string(&payload.secret) {
-        keypair => keypair,
+    // Parse the secret key from base58
+    let keypair = if payload.secret.len() < 32 {
+        return Json(SignApiResponse::Error(ErrorResponse {
+            success: false,
+            error: "Invalid secret key format".to_string(),
+        }));
+    } else {
+        match bs58::decode(&payload.secret).into_vec() {
+            Ok(bytes) if bytes.len() == 64 => {
+                match Keypair::from_bytes(&bytes) {
+                    Ok(kp) => kp,
+                    Err(_) => {
+                        return Json(SignApiResponse::Error(ErrorResponse {
+                            success: false,
+                            error: "Invalid secret key format".to_string(),
+                        }));
+                    }
+                }
+            }
+            _ => {
+                return Json(SignApiResponse::Error(ErrorResponse {
+                    success: false,
+                    error: "Invalid secret key format".to_string(),
+                }));
+            }
+        }
     };
 
     let message_bytes = payload.message.as_bytes();
