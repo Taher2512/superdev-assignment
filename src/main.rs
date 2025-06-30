@@ -25,7 +25,7 @@ async fn main() {
         .route("/send/sol", post(send_sol))
         .route("/send/token", post(send_token));
 
-    let address = "0.0.0.0:80";
+    let address = "0.0.0.0:3000";
     let listener = tokio::net::TcpListener::bind(address)
         .await
         .unwrap();
